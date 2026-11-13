@@ -18,3 +18,12 @@
 ## 输出契约
 
 CLI 输出 JSON：`samples` 为交错整数样本，另有 `frames` 与 `work`。
+
+## 实现要点
+
+- 相位以 `1 / dst_rate` 源帧为单位的整数游标保存（`phase += src_rate`），跨 chunk 精确推进，无浮点漂移。
+- 样本值按精确有理数线性插值，舍入为"就近取整、半数取偶"（与 Python `round()` 一致）。
+- 当前位置缺少右邻帧时暂不输出，等下一块输入；流结束时尚未消费的尾帧不再产生输出，因此 `finish()` 不会漏帧也不会提前吞帧。
+- 已消费的帧随游标推进即时丢弃，内存与 `work` 都只随输入总量线性增长，不会每个 chunk 重扫旧数据。
+- 可直接使用 `StreamResampler.feed(chunk)` / `finish()` 做增量处理；`resample_chunks()` 是其批量封装。
+
